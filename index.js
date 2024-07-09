@@ -21,7 +21,9 @@ if (!fs.existsSync(uploadsDir)) {
 }
 
 // MongoDB connection
-mongoose.connect('mongodb://localhost:27017/postsDB', { useNewUrlParser: true, useUnifiedTopology: true })
+const mongodb_url = "mongodb+srv://nanisaimedia:Dzz6ACykBKlJtCb7@cluster0.7i80y3t.mongodb.net/postsDB";
+
+mongoose.connect(mongodb_url, { useNewUrlParser: true, useUnifiedTopology: true })
     .then(() => console.log('MongoDB connected'))
     .catch(err => console.log('MongoDB connection error:', err));
 
@@ -44,13 +46,11 @@ const postSchema = new mongoose.Schema({
     imageUrl: String,
     likes: { type: Number, default: 0 },
     dislikes: { type: Number, default: 0 },
-  }, { timestamps: true });
-
+}, { timestamps: true });
 
 const Post = mongoose.model('Post', postSchema);
 
 // Routes
-
 app.put('/posts/:id/like', async (req, res) => {
     try {
         const post = await Post.findById(req.params.id);
@@ -80,11 +80,10 @@ app.get('/posts', async (req, res) => {
         const posts = await Post.find();
         res.json(posts);
     } catch (err) {
-        console.error('Error fetching posts:', err);
+        console.error('Error fetching posts:', err.message, err.stack);
         res.status(500).send('Server Error');
     }
 });
-
 
 app.delete('/posts/:id', async (req, res) => {
     try {
@@ -94,11 +93,10 @@ app.delete('/posts/:id', async (req, res) => {
         }
         res.json({ message: 'Post deleted successfully' });
     } catch (err) {
-        console.error('Error deleting post:', err.message);
+        console.error('Error deleting post:', err.message, err.stack);
         res.status(500).send('Server Error');
     }
 });
-
 
 app.get('/posts/:id', async (req, res) => {
     try {
@@ -108,15 +106,13 @@ app.get('/posts/:id', async (req, res) => {
         }
         res.json(post);
     } catch (err) {
-        console.error('Error fetching post:', err.message);
+        console.error('Error fetching post:', err.message, err.stack);
         res.status(500).send('Server Error');
     }
 });
 
 app.put('/posts/:id', upload.single('image'), async (req, res) => {
     try {
-        console.log('Request body:', req.body);
-        console.log('Uploaded file:', req.file);
         const updatedPost = await Post.findByIdAndUpdate(
             req.params.id,
             {
@@ -126,18 +122,18 @@ app.put('/posts/:id', upload.single('image'), async (req, res) => {
             },
             { new: true }
         );
+        if (!updatedPost) {
+            return res.status(404).send('Post not found');
+        }
         res.json(updatedPost);
     } catch (err) {
-        console.error('Error updating post:', err.message); // Log the error message
-        console.error(err.stack); // Log the error stack for more details
+        console.error('Error updating post:', err.message, err.stack);
         res.status(500).send('Server Error');
     }
 });
 
 app.post('/posts', upload.single('image'), async (req, res) => {
     try {
-        console.log('Request body:', req.body);
-        console.log('Uploaded file:', req.file);
         const newPost = new Post({
             title: req.body.title,
             content: req.body.content,
@@ -146,33 +142,13 @@ app.post('/posts', upload.single('image'), async (req, res) => {
         await newPost.save();
         res.json(newPost);
     } catch (err) {
-        console.error('Error creating post:', err.message); // Log the error message
-        console.error(err.stack); // Log the error stack for more details
+        console.error('Error creating post:', err.message, err.stack);
         res.status(500).send('Server Error');
     }
 });
 
-app.put('/posts/:id', upload.single('image'), async (req, res) => {
-    try {
-        console.log('Request body:', req.body);
-        console.log('Uploaded file:', req.file);
-        const updatedPost = await Post.findByIdAndUpdate(
-            req.params.id,
-            {
-                title: req.body.title,
-                content: req.body.content,
-                imageUrl: req.file ? `/uploads/${req.file.filename}` : req.body.imageUrl
-            },
-            { new: true }
-        );
-        res.json(updatedPost);
-    } catch (err) {
-        console.error('Error updating post:', err.message); // Log the error message
-        console.error(err.stack); // Log the error stack for more details
-        res.status(500).send('Server Error');
-    }
-});
+const PORT = process.env.PORT || 5020;
 
-app.listen(5020, () => {
-    console.log('Server is running on port 5020');
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
 });
